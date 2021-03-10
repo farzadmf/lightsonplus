@@ -220,13 +220,21 @@ checkAudioPlaying() {
     # It's also useful if you watch videos on multiple monitors and might not
     # have the video in focus.
     [ $audio_detection = 0 ] && return 0
-    pacmd list-sink-inputs | grep -Eiq "RUNNING"
+    if which pacmd &>/dev/null; then
+      pacmd list-sink-inputs | grep -Eiq "RUNNING"
+    else
+      pactl list short sinks | grep -Eiq "RUNNING"
+    fi
 }
 
 checkAudio() {
     # Check if application is streaming sound to PulseAudio
     [ $audio_detection = 0 ] && return 0
-    pacmd list-sink-inputs | grep -Eiq "application.name = .*$1.*"
+    if which pacmd &>/dev/null; then
+      pacmd list-sink-inputs | grep -Eiq "application.name = .*$1.*"
+    else
+      pw-cli dump short Node | grep -Eiq "n=\".*$1.*\"" | grep -Eq 's="running"'
+    fi
 }
 
 delayScreensaver() {
@@ -323,6 +331,7 @@ delay=$[delay*60-10]
 echo "Start lightson+ mainloop"
 while true; do
     [ -f "$inhibitfile" ] && delayScreensaver || checkFullscreen
+    checkAudioPlaying && delayScreensaver
     sleep $delay
 done
 
